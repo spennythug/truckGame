@@ -1,0 +1,360 @@
+<html>
+   <head>
+      <title>HTML5 Game template: box2dweb</title>
+      
+      <style type="text/css">
+      
+	  html, body{
+		  margin:0px;
+		  padding:0px;
+		  }
+      
+      
+      </style>
+      
+   </head>
+   <body onLoad="init();">
+      
+   </body>
+   <script type="text/javascript" src="Box2dWeb-2.1.a.3.min.js"></script>
+      <script type="text/javascript" src="jquery.js"></script>
+   <script type="text/javascript">
+      
+      function init() {
+		  
+		  var WH = $(window).height();
+		  var WW = $(window).width();
+		  
+		  var scaledown = 1/30;
+		  var scaleup = 30;
+		  
+	 window.ondevicemotion = function(event) {  
+    accelerationX = event.accelerationIncludingGravity.x;  
+    accelerationY = event.accelerationIncludingGravity.y;  
+    accelerationZ = event.accelerationIncludingGravity.z; 
+	
+	
+	//$('p').text("X: "+accelerationX+", Y: "+accelerationY+", Z: "+accelerationZ);
+	
+	 
+}
+		  
+		  
+		  $('body').append("<canvas id='canvas' width='"+WW+"' height='"+WH+"' style='background-color:#333333;' ></canvas>"); // create a canvas
+		  
+         var   b2Vec2 = Box2D.Common.Math.b2Vec2 // get functions from box2d 
+            ,  b2AABB = Box2D.Collision.b2AABB
+         	,	b2BodyDef = Box2D.Dynamics.b2BodyDef
+         	,	b2Body = Box2D.Dynamics.b2Body
+         	,	b2FixtureDef = Box2D.Dynamics.b2FixtureDef
+         	,	b2Fixture = Box2D.Dynamics.b2Fixture
+         	,	b2World = Box2D.Dynamics.b2World
+         	,	b2MassData = Box2D.Collision.Shapes.b2MassData
+         	,	b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
+         	,	b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
+         	,	b2DebugDraw = Box2D.Dynamics.b2DebugDraw
+          ,  b2MouseJointDef =  Box2D.Dynamics.Joints.b2MouseJointDef
+			    ,  b2RevoluteJointDef =  Box2D.Dynamics.Joints.b2RevoluteJointDef
+          ,  b2DistanceJointDef =  Box2D.Dynamics.Joints.b2DistanceJointDef
+            ;
+         
+         var world = new b2World(
+               new b2Vec2(0, 10)    //gravity
+            ,  true                 //allow sleep
+         );
+         
+         var fixDef = new b2FixtureDef; // create a new fixture definition
+         fixDef.density = 1.0;
+         fixDef.friction = 0.75;
+         fixDef.restitution = 0.2;
+         
+         var bodyDef = new b2BodyDef; // create a new body definition
+         
+         //create ground
+         bodyDef.type = b2Body.b2_staticBody; // make it so the body cannot move
+         fixDef.shape = new b2PolygonShape; // make the fixture a polygone and not a circle
+		 
+		//top		 
+         fixDef.shape.SetAsBox(WW*scaledown, 2); // set fixture as box
+         bodyDef.position.Set(0, -2); // make the position for the wall wall. Everything is in meters. the meter to pixel ratio is 30 to 1. this is just off the top of the screen
+         var top = world.CreateBody(bodyDef); // create the body for the top wall
+		 top.CreateFixture(fixDef); // actually create the fixture and add it to the body.
+
+
+        // now make the three other walls. 
+
+         //bottom
+		 fixDef.shape.SetAsBox(WW*scaledown, 2);
+         bodyDef.position.Set(0, WH*scaledown+2);
+         var bottom = world.CreateBody(bodyDef);
+		 bottom.CreateFixture(fixDef);
+		 
+		 //left
+		 fixDef.shape.SetAsBox(2, WH*scaledown);
+         bodyDef.position.Set(-2, 0);
+         var left = world.CreateBody(bodyDef);
+		 left.CreateFixture(fixDef);
+		 
+		  //Right
+		 fixDef.shape.SetAsBox(2, WH*scaledown);
+         bodyDef.position.Set(WW*scaledown+2, 0);
+         var right = world.CreateBody(bodyDef);
+		 right.CreateFixture(fixDef);
+         
+         //create some objects
+      
+	   bodyDef.type = b2Body.b2_dynamicBody; // make the bodies movable. 
+	   
+	   fixDef.shape.SetAsBox(2, 1); // make the car body a box. (width, height)
+     bodyDef.position.Set(2.5, 1.5);  
+     var car = world.CreateBody(bodyDef); 
+		 car.CreateFixture(fixDef); // make the car with a variable we can use.
+	  
+    fixDef.shape = new b2CircleShape(1); // make the fixture def circles. 
+            
+      bodyDef.position.x = 4;
+      bodyDef.position.y = 3;
+      var wheel1 = world.CreateBody(bodyDef) // make the wheels 
+      wheel1.CreateFixture(fixDef);
+      bodyDef.position.x = 1;
+      bodyDef.position.y = 3;
+      var wheel2 = world.CreateBody(bodyDef)
+      wheel2.CreateFixture(fixDef);
+         
+		 
+		  var joint = new b2DistanceJointDef(); // make distance joints to keep wheels in place. 
+
+     carCenter = new b2Vec2(car.GetWorldCenter().x + 1, car.GetWorldCenter().y);
+     carCenter2 = new b2Vec2(car.GetWorldCenter().x - 1, car.GetWorldCenter().y);
+
+
+      joint.Initialize(wheel1, car, wheel1.GetWorldCenter(), carCenter);
+      joint.dampingRatio = 0;
+      joint.frequencyHz = 2; // this is some shit I don't understand. 
+      world.CreateJoint(joint);
+    	joint.Initialize(wheel2, car, wheel2.GetWorldCenter(), carCenter2);
+      joint.dampingRatio = 0;
+      joint.frequencyHz = 2;
+      world.CreateJoint(joint);
+
+
+      joint.Initialize(wheel1, car, wheel1.GetWorldCenter(), car.GetWorldCenter());
+      joint.dampingRatio = 0;
+      joint.frequencyHz = 4; // this is some shit I don't understand. 
+      world.CreateJoint(joint);
+      joint.Initialize(wheel2, car, wheel2.GetWorldCenter(), car.GetWorldCenter());
+      joint.dampingRatio = 0;
+      joint.frequencyHz = 4; // this is some shit I don't understand. 
+      world.CreateJoint(joint);
+
+
+
+      joint.Initialize(wheel1, wheel2, wheel1.GetWorldCenter(), wheel2.GetWorldCenter());
+      world.CreateJoint(joint);
+         
+         //setup debug draw
+         var debugDraw = new b2DebugDraw(); // this is included in the engine and renders the game for us to see while we make it. We will have to write our own code for the graphics. 
+			debugDraw.SetSprite(document.getElementById("canvas").getContext("2d"));
+			debugDraw.SetDrawScale(30.0);
+			debugDraw.SetFillAlpha(0.5);
+			debugDraw.SetLineThickness(1.0);
+			debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
+			world.SetDebugDraw(debugDraw);
+         
+         window.setInterval(update, 1000 / 60);
+         
+         //mouse
+         
+
+         //these are some functions I found that are often handy. 
+         var mouseX, mouseY, mousePVec, isMouseDown, selectedBody, mouseJoint;
+         var canvasPosition = getElementPosition(document.getElementById("canvas"));
+         
+         document.addEventListener("mousedown", function(e) {
+            isMouseDown = true;
+            handleMouseMove(e);
+            document.addEventListener("mousemove", handleMouseMove, true);
+         }, true);
+         
+         document.addEventListener("mouseup", function() {
+            document.removeEventListener("mousemove", handleMouseMove, true);
+            isMouseDown = false;
+            mouseX = undefined;
+            mouseY = undefined;
+         }, true);
+         
+         function handleMouseMove(e) {
+            mouseX = (e.clientX - canvasPosition.x) / 30;
+            mouseY = (e.clientY - canvasPosition.y) / 30;
+         };
+         
+         function getBodyAtMouse() {
+            mousePVec = new b2Vec2(mouseX, mouseY);
+            var aabb = new b2AABB();
+            aabb.lowerBound.Set(mouseX - 0.001, mouseY - 0.001);
+            aabb.upperBound.Set(mouseX + 0.001, mouseY + 0.001);
+            
+            // Query the world for overlapping shapes.
+
+            selectedBody = null;
+            world.QueryAABB(getBodyCB, aabb);
+            return selectedBody;
+         }
+
+         function getBodyCB(fixture) {
+            if(fixture.GetBody().GetType() != b2Body.b2_staticBody) {
+               if(fixture.GetShape().TestPoint(fixture.GetBody().GetTransform(), mousePVec)) {
+                  selectedBody = fixture.GetBody();
+                  return false;
+               }
+            }
+            return true;
+         }
+         
+         //update
+		 rightisdown = false; // set up keyboard controlls 
+		 leftisdown = false;
+		 $(document).on("keydown", function(e){ // event listener for keypress 
+			 
+			if(e.keyCode == 39){ // look at keycode 
+
+				rightisdown = true; // change variable. 
+				
+				};
+				
+			if(e.keyCode == 37){
+
+				leftisdown = true;
+				
+				};
+			 
+			 });
+			 
+			 
+			$(document).on("keyup", function(e){ // this is for keyup to change the varibles back. 
+			 
+			if(e.keyCode == 39){
+
+				rightisdown = false;
+				
+				};
+				
+			if(e.keyCode == 37){
+
+				leftisdown = false;
+				
+				};
+			 
+			 });
+		 
+         
+         function update() {
+			 
+			 
+			 if(rightisdown){ // check to see if key is down. do a thing. 
+				 
+				 wheel1.ApplyTorque(100);
+          wheel2.ApplyTorque(100);
+				 
+				 };
+				 
+				if(leftisdown){
+				 
+				 wheel1.ApplyTorque(-100);
+         wheel2.ApplyTorque(-100);
+				 
+				 };
+         
+            if(isMouseDown && (!mouseJoint)) { // this makes it so you can grab bodies with the mouse. We'll delete this at some point. 
+               var body = getBodyAtMouse();
+               if(body) {
+                  var md = new b2MouseJointDef();
+                  md.bodyA = world.GetGroundBody();
+                  md.bodyB = body;
+                  md.target.Set(mouseX, mouseY);
+                  md.collideConnected = true;
+                  md.maxForce = 300.0 * body.GetMass();
+                  mouseJoint = world.CreateJoint(md);
+                  body.SetAwake(true);
+               }
+            }
+            
+            if(mouseJoint) {
+               if(isMouseDown) {
+                  mouseJoint.SetTarget(new b2Vec2(mouseX, mouseY));
+               } else {
+                  world.DestroyJoint(mouseJoint);
+                  mouseJoint = null;
+               }
+            }
+         
+            world.Step(1 / 60, 10, 10);
+            world.DrawDebugData();
+            world.ClearForces();
+         };
+         
+         //helpers
+         
+         //http://js-tut.aardon.de/js-tut/tutorial/position.html
+         function getElementPosition(element) {
+            var elem=element, tagname="", x=0, y=0;
+           
+            while((typeof(elem) == "object") && (typeof(elem.tagName) != "undefined")) {
+               y += elem.offsetTop;
+               x += elem.offsetLeft;
+               tagname = elem.tagName.toUpperCase();
+
+               if(tagname == "BODY")
+                  elem=0;
+
+               if(typeof(elem) == "object") {
+                  if(typeof(elem.offsetParent) == "object")
+                     elem = elem.offsetParent;
+               }
+            }
+
+            return {x: x, y: y};
+         }
+		 
+		 
+	
+	
+	// Touch to Mouse Event Conversion
+	
+		   var touchToMouse = function(event) {
+    if (event.touches.length > 1) return;
+    var touch = event.changedTouches[0];
+    var type = "";
+    
+    switch (event.type) {
+    case "touchstart": 
+        type = "mousedown"; break;
+    case "touchmove":  
+        type="mousemove";   break;
+    case "touchend":   
+        type="mouseup";     break;
+    default: 
+        return;
+    }
+    
+    // https://developer.mozilla.org/en/DOM/event.initMouseEvent for API
+    var simulatedEvent = document.createEvent("MouseEvent");
+    simulatedEvent.initMouseEvent(type, true, true, window, 1, 
+            touch.screenX, touch.screenY, 
+            touch.clientX, touch.clientY, false, 
+            false, false, false, 0, null);
+    
+    touch.target.dispatchEvent(simulatedEvent);
+    event.preventDefault();
+};
+document.ontouchstart = touchToMouse;
+document.ontouchmove = touchToMouse;
+document.ontouchend = touchToMouse;	 
+
+
+      };
+   
+   </script>
+   
+   
+</html>
